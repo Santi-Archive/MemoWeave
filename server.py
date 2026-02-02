@@ -108,6 +108,14 @@ async def analyze_stream(filename: str = Query(...), rule: str = Query(...), for
             return
 
         try:
+            # Clean output directory before starting new analysis
+            if OUTPUT_DIR.exists():
+                log_msg = send_log("Cleaning previous analysis output...")
+                if log_msg:
+                    yield log_msg
+                shutil.rmtree(OUTPUT_DIR)
+            OUTPUT_DIR.mkdir(exist_ok=True)
+            
             # Send initial log
             log_msg = send_log(f"Starting analysis for {filename} with rule {rule}...")
             if log_msg:

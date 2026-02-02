@@ -256,10 +256,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F6F3FA] p-5 font-['Segoe_UI']">
-      <div className="max-w-[1600px] mx-auto flex gap-5 min-h-[650px]">
+    <div className="min-h-screen bg-[#F6F3FA] p-4 sm:p-5 font-['Segoe_UI']">
+      <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-4 sm:gap-5 min-h-[550px]">
         {/* Left Panel */}
-        <div className="flex-[3] flex flex-col gap-5">
+        <div className="flex-[3] flex flex-col gap-4 sm:gap-5">
           {systemFeedback && <SystemFeedback message={systemFeedback} />}
 
           {/* Raw Story Card */}
@@ -300,7 +300,7 @@ export default function Home() {
             </div>
 
             {/* File Display */}
-            <div className="flex-1 min-h-[230px] mx-3 mb-3">
+            <div className="flex-1 min-h-[200px] mx-2.5 mb-2.5">
               {viewMode === "file" ? (
                 <div className="h-full bg-[#FAF8FE] border-2 border-dashed border-[#D7CFF1] rounded-lg p-5 overflow-y-auto">
                   {uploadedFiles.length === 0 ? (
@@ -310,7 +310,7 @@ export default function Home() {
                       (.txt files)
                     </div>
                   ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3 p-2.5">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(95px,1fr))] gap-5 p-2">
                       {uploadedFiles.map((file) => (
                         <FileIcon
                           key={file.id}
@@ -380,10 +380,10 @@ export default function Home() {
         </div>
 
         {/* Right Panel */}
-        <div className="flex-[2] flex flex-col gap-5">
+        <div className="flex-[2] flex flex-col gap-4 sm:gap-5">
           <Card title="Memo Weave Feedback" tint="#FFE2E2">
             <div
-              className="p-3 min-h-[200px] max-h-[25dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words"
+              className="p-3 min-h-[180px] max-h-[28dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words"
               dangerouslySetInnerHTML={{
                 __html:
                   inconsistenciesOutput ||
@@ -393,7 +393,7 @@ export default function Home() {
           </Card>
 
           <Card title="Memo Weave System Progress" tint="#EFEFEF">
-            <div className="p-3 min-h-[200px] max-h-[25dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words">
+            <div className="p-3 min-h-[180px] max-h-[28dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words">
               {progressOutput || (
                 <span className="text-[#9A90B8]">
                   System logs will appear here during analysis...
@@ -403,7 +403,7 @@ export default function Home() {
           </Card>
 
           <button
-            className="h-[50px] px-6 py-3 bg-gradient-to-r from-[rgba(125,95,181,0.75)] to-[rgba(199,132,255,1)] text-white rounded-xl text-lg font-semibold transition-all self-end hover:from-[rgba(138,106,209,0.85)] hover:to-[rgba(199,132,255,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(125,95,181,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-[48px] px-5 py-2.5 bg-gradient-to-r from-[rgba(125,95,181,0.75)] to-[rgba(199,132,255,1)] text-white rounded-xl text-base sm:text-lg font-semibold transition-all self-end lg:self-end hover:from-[rgba(138,106,209,0.85)] hover:to-[rgba(199,132,255,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(125,95,181,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleAnalyze}
             disabled={!canAnalyze}
           >
