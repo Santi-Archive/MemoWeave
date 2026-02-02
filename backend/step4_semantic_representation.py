@@ -58,38 +58,53 @@ def format_event_string(event: Dict[str, Any]) -> str:
     return "; ".join(parts) + "."
 
 
-def generate_embeddings(event_strings: List[str], model_name: str = "all-MiniLM-L6-v2") -> np.ndarray:
+def generate_embeddings(
+    event_strings: List[str],
+    model_name: str = "all-MiniLM-L6-v2"
+) -> np.ndarray:
     """
     Use sentence transformers to create embeddings.
-    
-    Args:
-        event_strings: List of formatted event strings
-        model_name: Name of the sentence transformer model
-        
-    Returns:
-        NumPy array of embedding vectors
+    Safe for web servers, subprocesses, and PyInstaller.
     """
+    import os
+    import sys
     from pathlib import Path
+
+    # ---- CRITICAL FIX ----
+    # Disable tqdm globally BEFORE importing sentence_transformers
+    os.environ["TQDM_DISABLE"] = "1"
+    os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+
+    # Monkey-patch tqdm to never call isatty
+    try:
+        import tqdm
+        tqdm.tqdm = lambda *args, **kwargs: args[0]
+    except Exception:
+        pass
+    # ----------------------
+
     from sentence_transformers import SentenceTransformer
-    import torch
-    
-    #print(f"Loading sentence transformer model: {model_name}...")
-    
-    # Try to load from local models directory first
+
+    # Resolve project root
     project_root = Path(__file__).parent.parent.absolute()
     local_cache = project_root / "models" / "sentence_transformers"
-    
+
+    # Load model
     if local_cache.exists():
-        print(f"Loading from local models directory: {local_cache}")
-        model = SentenceTransformer(model_name, cache_folder=str(local_cache))
+        model = SentenceTransformer(
+            model_name,
+            cache_folder=str(local_cache)
+        )
     else:
-        print("Loading from system cache (local models not found)...")
         model = SentenceTransformer(model_name)
-    
-    print(f"Generating embeddings for {len(event_strings)} events...")
-    embeddings = model.encode(event_strings, show_progress_bar=False, convert_to_numpy=True)
-    
-    #print(f"Generated embeddings with shape: {embeddings.shape}")
+
+    # Encode WITHOUT progress bars
+    embeddings = model.encode(
+        event_strings,
+        show_progress_bar=False,
+        convert_to_numpy=True
+    )
+
     return embeddings
 
 

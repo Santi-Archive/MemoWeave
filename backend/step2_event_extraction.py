@@ -45,7 +45,7 @@ def extract_events_with_srl(sentences: List[Dict], srl_model=None) -> List[Dict[
                 has_model = any(local_model_path.glob("*.bin")) or any(local_model_path.glob("*.safetensors"))
                 
                 if has_config and has_model:
-                    print(f"Loading from local models directory: {local_model_path}")
+                   # print(f"Loading from local models directory: {local_model_path}")
                     # Load directly from local path
                     srl_model = pipeline(
                         "token-classification",

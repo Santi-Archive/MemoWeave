@@ -3,6 +3,13 @@
 import sys
 import os
 
+os.environ["TRANSFORMERS_NO_TQDM"] = "1"
+os.environ["TQDM_DISABLE"] = "1"
+
+from transformers.utils import logging as hf_logging
+hf_logging.set_verbosity_error()
+hf_logging.disable_progress_bar()
+
 # ---- Torch DLL load fix for PyInstaller ----
 if hasattr(sys, "_MEIPASS"):
     torch_lib = os.path.join(sys._MEIPASS, "_internal", "torch", "lib")
