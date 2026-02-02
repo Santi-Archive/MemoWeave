@@ -296,7 +296,11 @@ export default function Home() {
             onClick={handleAnalyze}
             disabled={!canAnalyze}
           >
+<<<<<<< HEAD
             ✨ Analyze by Memo Weave
+=======
+            ✨ Analyze with MemoWeave AI
+>>>>>>> master
           </button>
         </div>
       </div>
