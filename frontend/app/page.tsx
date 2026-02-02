@@ -145,7 +145,7 @@ export default function Home() {
   }, [selectedFile, selectedRule]);
 
   return (
-    <div className="min-h-screen bg-[#F6F3FA] p-5 font-['Segoe_UI']">
+    <div className="max-h-screen bg-[#F6F3FA] p-5 font-['Segoe_UI']">
       <div className="max-w-[1600px] mx-auto flex gap-5 min-h-[650px]">
         {/* Left Panel */}
         <div className="flex-[3] flex flex-col gap-5">
@@ -265,7 +265,7 @@ export default function Home() {
         <div className="flex-[2] flex flex-col gap-5">
           <Card title="Memo Weave Feedback" tint="#FFE2E2">
             <div
-              className="p-3 min-h-[200px] max-h-[400px] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words"
+              className="p-3 min-h-[200px] max-h-[25dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words"
               dangerouslySetInnerHTML={{
                 __html:
                   inconsistenciesOutput ||
@@ -275,7 +275,7 @@ export default function Home() {
           </Card>
 
           <Card title="Memo Weave System Progress" tint="#EFEFEF">
-            <div className="p-3 min-h-[200px] max-h-[400px] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words">
+            <div className="p-3 min-h-[200px] max-h-[25dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words">
               {progressOutput || (
                 <span className="text-[#9A90B8]">
                   Reading Text...<br />
