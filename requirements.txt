@@ -1,0 +1,25 @@
+# Core API
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-multipart
+# python-dotenv (implicit if needed)
+
+# ML / NLP Libraries
+# Use CPU-only PyTorch to save space (approx 2GB savings)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+transformers>=4.0.0
+sentence-transformers>=2.2.0
+spacy>=3.0.0
+
+# Dependencies for Models/Utilities
+scikit-learn
+pandas
+numpy
+tqdm
+requests
+huggingface_hub
+
+# Optional/Legacy (Keep if code relies on them)
+# allennlp==2.9.3 # Warning: AllenNLP can be huge and cause conflicts. Uncomment only if strictly needed.
+# For now, excluding allennlp to save space, unless users code explicitly breaks without it.

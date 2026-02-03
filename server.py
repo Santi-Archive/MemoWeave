@@ -295,8 +295,8 @@ def ensure_models():
     missing = [name for name, available in status.items() if not available]
     
     if missing:
-        print(f"⚠️  Missing models detected: {', '.join(missing)}")
-        print("📥 Downloading models... This may take a few minutes.")
+        print(f"Missing models detected: {', '.join(missing)}")
+        print("Downloading models... This may take a few minutes.")
         print("")
         
         # Run download_models.py
