@@ -8,6 +8,7 @@ import { RuleButton } from "./components/RuleButton";
 import { SystemFeedback } from "./components/SystemFeedback";
 import { UploadIcon, FileTextIcon, TrashIcon } from "./components/Icons";
 
+// wire to backend url or localhost
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface UploadedFile {
