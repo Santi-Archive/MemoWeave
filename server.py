@@ -23,10 +23,12 @@ from pydantic import BaseModel
 app = FastAPI(title="MemoWeave API")
 
 # CORS Configuration
+# Support multiple frontend URLs via environment variable
+frontend_url = os.getenv("FRONTEND_URL", "")
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://memoweave.vercel.app"  
+    frontend_url  # Add production frontend URL from environment
 ]
 # Filter out empty strings
 allowed_origins = [origin for origin in allowed_origins if origin]
