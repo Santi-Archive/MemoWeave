@@ -23,12 +23,10 @@ from pydantic import BaseModel
 app = FastAPI(title="MemoWeave API")
 
 # CORS Configuration
-# Support multiple frontend URLs via environment variable
-frontend_url = os.getenv("FRONTEND_URL", "")
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    frontend_url  # Add production frontend URL from environment
+    "https://memoweave.vercel.app"  
 ]
 # Filter out empty strings
 allowed_origins = [origin for origin in allowed_origins if origin]
@@ -51,8 +49,9 @@ MEMORY_PATH = MEMORY_DIR / "memory_module.json"
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# Global lock
+# Global variables
 pipeline_lock = threading.Lock()
+current_analysis_process: Optional[subprocess.Popen] = None
 
 @app.get("/health")
 def health_check():
@@ -60,8 +59,8 @@ def health_check():
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    print("UPLOAD HIT")
-    print("Filename:", file.filename)
+    # print("UPLOAD HIT") # Reduced verbosity
+    # print("Filename:", file.filename)
     try:
         file_path = UPLOAD_DIR / file.filename
         with open(file_path, "wb") as buffer:
@@ -82,9 +81,52 @@ def list_files():
 def delete_file(filename: str):
     file_path = UPLOAD_DIR / filename
     if file_path.exists():
-        file_path.unlink()
+        try:
+            file_path.unlink()
+        except PermissionError:
+             # If file is locked, we might need to force reset
+             raise HTTPException(status_code=409, detail="File is currently in use.")
         return {"status": "deleted"}
     raise HTTPException(status_code=404, detail="File not found")
+
+@app.post("/reset")
+def reset_session():
+    """
+    Terminates ongoing analysis and clears uploaded files.
+    Called on frontend mount (page reload).
+    """
+    global current_analysis_process
+    
+    # 1. Terminate running process
+    if current_analysis_process:
+        poll = current_analysis_process.poll()
+        if poll is None:
+            print("Terminating ongoing analysis process...")
+            current_analysis_process.terminate()
+            try:
+                current_analysis_process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                current_analysis_process.kill()
+    
+    # 2. Clear Uploads
+    if UPLOAD_DIR.exists():
+        for f in UPLOAD_DIR.iterdir():
+            try:
+                if f.is_file():
+                    f.unlink()
+                elif f.is_dir():
+                    shutil.rmtree(f)
+            except Exception as e:
+                print(f"Failed to clear {f}: {e}")
+                
+    # 3. Clear Output (Optional, but good for clean slate)
+    if OUTPUT_DIR.exists():
+        try:
+             shutil.rmtree(OUTPUT_DIR)
+        except Exception as e:
+             print(f"Failed to clear output: {e}")
+
+    return {"status": "session_reset"}
 
 @app.get("/files/{filename}/content")
 def get_file_content(filename: str):
@@ -108,12 +150,23 @@ async def analyze_stream(filename: str = Query(...), rule: str = Query(...), for
         raise HTTPException(status_code=404, detail="Input file not found")
 
     def analysis_generator() -> Generator[str, None, None]:
+        global current_analysis_process
+        
         # Helper to format and yield log messages
         def send_log(msg: str):
             msg = msg.strip()
             if not msg:
                 return None
             return f"data: {msg}\n\n"
+            
+        # Helper to filter progress bars
+        def is_useful_log(line: str) -> bool:
+            # Filter TQDM/Progress bar artifacts
+            # Matches "100%|", "it/s", leading carriage returns without newline
+            if "it/s]" in line: return False
+            if "%|" in line and "|" in line: return False
+            if line.startswith("\r"): return False # Carriage return only updates
+            return True
                 
         if not pipeline_lock.acquire(blocking=False):
             yield send_log("Analysis already in progress. Please wait.\n\n")
@@ -172,22 +225,31 @@ async def analyze_stream(filename: str = Query(...), rule: str = Query(...), for
                     env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Extra unbuffering
                 )
                 
+                current_analysis_process = process
+                
                 # Stream output line by line
                 while True:
                     line = process.stdout.readline()
                     if line:
-                        msg = send_log(line)
-                        if msg:
-                            yield msg
+                        if is_useful_log(line):
+                            msg = send_log(line)
+                            if msg:
+                                yield msg
                     elif process.poll() is not None:
                         break
                     else:
                         # keep SSE alive
                         yield ": keep-alive\n\n"
                         time.sleep(0.2)
+                
+                current_analysis_process = None
 
                 if process.returncode != 0:
-                    error_msg = f"Pipeline subprocess failed with exit code {process.returncode}"
+                    # Check if it was killed by reset
+                    if process.returncode == -15 or process.returncode == 1: # Terminated usually -15 (SIGTERM) or 1 depending on OS
+                         error_msg = "Analysis terminated by user or reset."
+                    else:
+                         error_msg = f"Pipeline subprocess failed with exit code {process.returncode}"
                     yield send_log(error_msg)
                     raise RuntimeError(error_msg)
                 
@@ -279,10 +341,21 @@ async def analyze_stream(filename: str = Query(...), rule: str = Query(...), for
             sys.stderr.write(f"Server Error: {e}\n")
             yield f"event: error_msg\ndata: Server Error: {str(e)}\n\n"
         finally:
+            # Ensure process is killed if client disconnects
+            if current_analysis_process and current_analysis_process.poll() is None:
+                print("Client disconnected or stream ended. Terminating process...")
+                try:
+                    current_analysis_process.terminate()
+                    current_analysis_process.wait(timeout=2)
+                except Exception:
+                    # If terminate fails or times out, force kill
+                    if current_analysis_process:
+                        current_analysis_process.kill()
+
+            current_analysis_process = None
             pipeline_lock.release()
 
     return StreamingResponse(analysis_generator(), media_type="text/event-stream")
-
 
 def ensure_models():
     """
@@ -332,3 +405,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))  # Railway sets PORT env variable
     uvicorn.run(app, host="0.0.0.0", port=port)
+

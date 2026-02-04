@@ -32,10 +32,11 @@ export default function Home() {
   const [progressOutput, setProgressOutput] = useState<string>("");
   const [systemFeedback, setSystemFeedback] = useState<string>("");
   const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Ref for EventSource to close it if component unmounts
   const eventSourceRef = useRef<EventSource | null>(null);
-  const isInitialMount = useRef(true);
+  // const isInitialMount = useRef(true); // No longer needed if we always reset
 
   const selectedFile = uploadedFiles.find((f) => f.id === selectedFileId);
   const canAnalyze =
@@ -43,24 +44,16 @@ export default function Home() {
     !pipelineRunning &&
     (viewMode === "text" || selectedFile !== null);
 
-  const showSystemFeedback = useCallback((message: string, duration = 2500) => {
+  const showSystemFeedback = useCallback((message: string, duration = 3000) => {
     setSystemFeedback(message);
     setTimeout(() => setSystemFeedback(""), duration);
   }, []);
 
-  // Fetch files on mount
+  // Fetch files (still used after upload)
   const fetchFiles = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/files`);
-
-      if (!res.ok) {
-        // Backend responded, but with error
-        if (!isInitialMount.current) {
-          console.error("Failed to fetch files:", res.statusText);
-        }
-        return;
-      }
-
+      if (!res.ok) return;
       const files = await res.json();
       setUploadedFiles(
         files.map((f: any) => ({
@@ -70,31 +63,32 @@ export default function Home() {
         })),
       );
     } catch (err) {
-      // Network / connection error
-      if (!isInitialMount.current) {
-        console.error("Failed to fetch files", err);
-      }
-      // silently ignore on first load
-    } finally {
-      isInitialMount.current = false;
+      console.error("Failed to fetch files", err);
     }
   }, []);
 
+  // Reset Session on Mount
   useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
+    const resetSession = async () => {
+      try {
+        await fetch(`${API_URL}/reset`, { method: "POST" });
+        setUploadedFiles([]);
+        setSelectedFileId(null);
+        setInconsistenciesOutput("");
+        setProgressOutput("");
+      } catch (err) {
+        console.error("Failed to reset session:", err);
+      }
+    };
+    resetSession();
+  }, []); // Run once on mount
 
-  const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files) return;
-
+  const uploadFiles = useCallback(async (files: FileList | File[]) => {
       for (const file of Array.from(files)) {
-        if (uploadedFiles.some((f) => f.filename === file.name)) {
-          showSystemFeedback(`File ${file.name} already uploaded.`);
-          continue;
-        }
-
+        // Basic check to avoid duplicates/unnecessary calls if we know it's there? 
+        // Logic handled by backend overwrite usually, but frontend check is nice.
+        // Since we allow duplicates (overwrite), we just proceed.
+        
         const formData = new FormData();
         formData.append("file", file);
 
@@ -106,7 +100,6 @@ export default function Home() {
 
           if (res.ok) {
             showSystemFeedback(`Uploaded ${file.name}`);
-            fetchFiles(); // Refresh list
           } else {
             showSystemFeedback(`Failed to upload ${file.name}`);
           }
@@ -115,9 +108,41 @@ export default function Home() {
           showSystemFeedback(`Error uploading ${file.name}`);
         }
       }
+      fetchFiles(); // Refresh list after all uploads
+  }, [fetchFiles, showSystemFeedback]);
+
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+      uploadFiles(files);
     },
-    [uploadedFiles, showSystemFeedback, fetchFiles],
+    [uploadFiles],
   );
+
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const onDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const validFiles = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.txt'));
+      if (validFiles.length > 0) {
+          uploadFiles(validFiles);
+      } else {
+          showSystemFeedback("Only .txt files are supported.");
+      }
+    }
+  }, [uploadFiles, showSystemFeedback]);
+
 
   const handleFileSelect = useCallback((fileId: string) => {
     if (pipelineRunning) {
@@ -153,6 +178,8 @@ export default function Home() {
   const handleDeleteFile = useCallback(async () => {
     if (!selectedFile) return;
 
+    if (pipelineRunning) return;
+
     const confirmed = window.confirm(
       `Are you sure you want to delete:\n\n${selectedFile.filename}?`,
     );
@@ -176,7 +203,7 @@ export default function Home() {
     } catch (err) {
       showSystemFeedback("Error deleting file.");
     }
-  }, [selectedFile, selectedFileId, showSystemFeedback]);
+  }, [selectedFile, selectedFileId, showSystemFeedback, pipelineRunning]);
 
   const handleRuleSelect = useCallback(
     (rule: RuleType) => {
@@ -265,97 +292,106 @@ export default function Home() {
 
           {/* Raw Story Card */}
           <Card title="Raw Story" tint="#F3DDF7">
-            <div className="flex gap-2.5 p-2.5">
-              <label className={`flex items-center gap-2 px-[18px] py-2.5 rounded-md font-medium text-sm transition-all ${
-                pipelineRunning
-                  ? 'bg-[#B5A5D5] text-white cursor-not-allowed opacity-50'
-                  : 'bg-[#7D5FB5] text-white cursor-pointer hover:bg-[#6B4FA0]'
-              }`}>
-                <UploadIcon />
-                Upload Files
-                <input
-                  type="file"
-                  multiple
-                  accept=".txt"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={pipelineRunning}
-                />
-              </label>
-              <button
-                className="flex items-center gap-2 px-[18px] py-2.5 bg-[#E8E1F5] text-[#5A4A7A] rounded-md font-medium text-sm transition-all hover:bg-[#D5C8F0] disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleLoadFile}
-                disabled={!selectedFile || pipelineRunning}
-              >
-                <FileTextIcon />
-                Select File
-              </button>
-              <button
-                className="flex items-center gap-2 px-[18px] py-2.5 bg-[#FFE5E5] text-[#C44444] rounded-md font-medium text-sm transition-all hover:bg-[#FFD0D0] disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleDeleteFile}
-                disabled={!selectedFile || pipelineRunning}
-              >
-                <TrashIcon />
-                Delete File
-              </button>
-            </div>
-
-            {/* File Display */}
-            <div className="flex-1 min-h-[200px] mx-2.5 mb-2.5">
-              {viewMode === "file" ? (
-                <div className="h-full bg-[#FAF8FE] border-2 border-dashed border-[#D7CFF1] rounded-lg p-5 overflow-y-auto">
-                  {uploadedFiles.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-[#9A90B8] text-center leading-relaxed">
-                      Drag and drop your story file/s here
-                      <br />
-                      (.txt files)
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(95px,1fr))] gap-5 p-2">
-                      {uploadedFiles.map((file) => (
-                        <FileIcon
-                          key={file.id}
-                          filename={file.filename}
-                          filepath={file.filepath}
-                          selected={file.id === selectedFileId}
-                          onClick={() => handleFileSelect(file.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
+            <div
+                className={`flex-1 flex flex-col transition-colors duration-200 ${isDragging ? 'bg-[#E5DDF5] rounded-b-lg' : ''}`}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+            >
+                <div className="flex gap-2.5 p-2.5">
+                <label className={`flex items-center gap-2 px-[18px] py-2.5 rounded-md font-medium text-sm transition-all ${
+                    pipelineRunning
+                    ? 'bg-[#B5A5D5] text-white cursor-not-allowed opacity-50'
+                    : 'bg-[#7D5FB5] text-white cursor-pointer hover:bg-[#6B4FA0]'
+                }`}>
+                    <UploadIcon />
+                    Upload Files
+                    <input
+                    type="file"
+                    multiple
+                    accept=".txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={pipelineRunning}
+                    />
+                </label>
+                <button
+                    className="flex items-center gap-2 px-[18px] py-2.5 bg-[#E8E1F5] text-[#5A4A7A] rounded-md font-medium text-sm transition-all hover:bg-[#D5C8F0] disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleLoadFile}
+                    disabled={!selectedFile || pipelineRunning}
+                >
+                    <FileTextIcon />
+                    Select File
+                </button>
+                <button
+                    className="flex items-center gap-2 px-[18px] py-2.5 bg-[#FFE5E5] text-[#C44444] rounded-md font-medium text-sm transition-all hover:bg-[#FFD0D0] disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleDeleteFile}
+                    disabled={!selectedFile || pipelineRunning}
+                >
+                    <TrashIcon />
+                    Delete File
+                </button>
                 </div>
-              ) : (
-                <textarea
-                  className="w-full h-full p-3 border border-[#E0DAF0] rounded-md font-['Consolas','Courier_New',monospace] text-[13px] resize-none bg-white"
-                  value={fileContent}
-                  readOnly
-                />
-              )}
-            </div>
 
-            {/* View Mode Switch */}
-            <div className="flex justify-center gap-5 px-3 pb-2.5 mb-2.5">
-              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-[#5A4A7A]">
-                <input
-                  type="radio"
-                  name="viewMode"
-                  checked={viewMode === "file"}
-                  onChange={() => setViewMode("file")}
-                  className="cursor-pointer"
-                />
-                File Mode
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer text-sm text-[#5A4A7A]">
-                <input
-                  type="radio"
-                  name="viewMode"
-                  checked={viewMode === "text"}
-                  onChange={() => setViewMode("text")}
-                  disabled={!selectedFile}
-                  className="cursor-pointer disabled:cursor-not-allowed"
-                />
-                Text Mode
-              </label>
+                {/* File Display */}
+                <div className="flex-1 min-h-[200px] mx-2.5 mb-2.5">
+                {viewMode === "file" ? (
+                    <div className={`h-full bg-[#FAF8FE] border-2 border-dashed border-[#D7CFF1] rounded-lg p-5 overflow-y-auto transition-colors ${
+                        isDragging ? 'border-[#7D5FB5] bg-[#F0E6FA]' : ''
+                    }`}>
+                    {uploadedFiles.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-[#9A90B8] text-center leading-relaxed">
+                        Drag and drop your story file/s here
+                        <br />
+                        (.txt files)
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(95px,1fr))] gap-5 p-2">
+                        {uploadedFiles.map((file) => (
+                            <FileIcon
+                            key={file.id}
+                            filename={file.filename}
+                            filepath={file.filepath}
+                            selected={file.id === selectedFileId}
+                            onClick={() => handleFileSelect(file.id)}
+                            />
+                        ))}
+                        </div>
+                    )}
+                    </div>
+                ) : (
+                    <textarea
+                    className="w-full h-full p-3 border border-[#E0DAF0] rounded-md font-['Consolas','Courier_New',monospace] text-[13px] resize-none bg-white"
+                    value={fileContent}
+                    readOnly
+                    />
+                )}
+                </div>
+
+                {/* View Mode Switch */}
+                <div className="flex justify-center gap-5 px-3 pb-2.5 mb-2.5">
+                <label className="flex items-center gap-1.5 cursor-pointer text-sm text-[#5A4A7A]">
+                    <input
+                    type="radio"
+                    name="viewMode"
+                    checked={viewMode === "file"}
+                    onChange={() => setViewMode("file")}
+                    className="cursor-pointer"
+                    />
+                    File Mode
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-sm text-[#5A4A7A]">
+                    <input
+                    type="radio"
+                    name="viewMode"
+                    checked={viewMode === "text"}
+                    onChange={() => setViewMode("text")}
+                    disabled={!selectedFile}
+                    className="cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    Text Mode
+                </label>
+                </div>
             </div>
           </Card>
 
@@ -394,9 +430,9 @@ export default function Home() {
           </Card>
 
           <Card title="Memo Weave System Progress" tint="#EFEFEF">
-            <div className="p-3 min-h-[180px] max-h-[28dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words">
+            <div className="p-3 min-h-[180px] max-h-[28dvh] overflow-y-auto border border-[#E0DAF0] bg-white rounded-md text-sm leading-relaxed text-[#2D2640] whitespace-pre-wrap break-words font-mono text-xs">
               {progressOutput || (
-                <span className="text-[#9A90B8]">
+                <span className="text-[#9A90B8] font-sans">
                   System logs will appear here during analysis...
                 </span>
               )}
@@ -404,11 +440,21 @@ export default function Home() {
           </Card>
 
           <button
-            className="h-[48px] px-5 py-2.5 bg-gradient-to-r from-[rgba(125,95,181,0.75)] to-[rgba(199,132,255,1)] text-white rounded-xl text-base sm:text-lg font-semibold transition-all self-end lg:self-end hover:from-[rgba(138,106,209,0.85)] hover:to-[rgba(199,132,255,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(125,95,181,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-[48px] px-5 py-2.5 bg-gradient-to-r from-[rgba(125,95,181,0.75)] to-[rgba(199,132,255,1)] text-white rounded-xl text-base sm:text-lg font-semibold transition-all self-end lg:self-end hover:from-[rgba(138,106,209,0.85)] hover:to-[rgba(199,132,255,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(125,95,181,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             onClick={handleAnalyze}
-            disabled={!canAnalyze}
+            disabled={!canAnalyze && !pipelineRunning} 
           >
-            ✨ Analyze with MemoWeave AI
+            {pipelineRunning ? (
+                <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading...
+                </>
+            ) : (
+                "✨ Analyze with MemoWeave AI"
+            )}
           </button>
         </div>
       </div>
