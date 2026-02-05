@@ -2,7 +2,8 @@
 fastapi>=0.68.0
 uvicorn>=0.15.0
 python-multipart
-# python-dotenv (implicit if needed)
+python-dotenv
+google-generativeai
 
 # ML / NLP Libraries
 # Use CPU-only PyTorch to save space (approx 2GB savings)
