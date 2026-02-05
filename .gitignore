@@ -42,7 +42,7 @@ output/
 Thumbs.db
 
 # Models directory (optional - uncomment if you don't want to commit models)
-models/
+#models/
 
 # Output files
 output/
