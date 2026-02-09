@@ -76,7 +76,6 @@ def call_reasoning_llm(prompt: str) -> str:
                     "Some actors could be locations.\n"
                     "Summarize issues per chapter in human-readable paragraphs.\n"
                     "For each violation, guide the user by explicitly mentioning the particular sentence/s you found the violation in.\n"
-                    "For each violation, suggest what should happen instead.\n"
                     "Do NOT reference event IDs or sentence IDs.\n"
                     "Do NOT rewrite the story, only report violations."
                 )
