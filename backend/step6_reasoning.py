@@ -9,12 +9,12 @@ from pathlib import Path
 # Use relative imports if running as module, otherwise add parent to path
 try:
     from .utils import load_json, save_json, ensure_directory
-    from .llm_client_bup import call_reasoning_model
+    from .llm_client import call_gemini_with_retry as call_reasoning_model
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from backend.utils import load_json, save_json, ensure_directory
-    from backend.llm_client_bup import call_reasoning_model
+    from backend.llm_client import call_gemini_with_retry as call_reasoning_model
 
 def format_events_for_prompt(events: List[Dict]) -> str:
     """

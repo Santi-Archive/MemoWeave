@@ -237,6 +237,34 @@ def run_pipeline(
             traceback.print_exc()
             step_errors.append(error_msg)
             raise
+        
+        # Step 6: Temporal-Causal Reasoning
+        print()
+        print("STEP 6: Temporal-Causal Reasoning")
+        try:
+            # Dynamic import handling for both module and direct execution
+            try:
+                from .step6_reasoning import process_reasoning
+            except ImportError:
+                from backend.step6_reasoning import process_reasoning
+            
+            res = process_reasoning(output_dir, output_dir)
+            print()
+            if res.get("status") == "success":
+                data = res.get("data", {})
+                temporal_count = len(data.get('temporal_relations', []))
+                causal_count = len(data.get('causal_relations', []))
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] OK: Step 6 completed successfully")
+                print(f"  - Inferred {temporal_count} temporal relations")
+                print(f"  - Inferred {causal_count} causal relations")
+            else:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] WARNING: Step 6 skipped/failed (non-critical)")
+                print(f"  - Reason: {res.get('error', 'Unknown error')}")
+                # Don't raise - reasoning step is optional/non-critical
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] WARNING: Step 6 failed (non-critical): {e}")
+            # Don't add to step_errors or raise - this step is optional
+        
         print()
         
         # Final output path
