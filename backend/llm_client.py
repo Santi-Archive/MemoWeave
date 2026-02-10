@@ -48,8 +48,13 @@ def call_reasoning_model(system_prompt: str, user_prompt: str) -> str:
     }
 
     try:
+        total_chars = len(system_prompt) + len(user_prompt)
         print(f"[LLM Client] Calling OpenRouter ({MODEL_NAME})...")
+        print(f"[LLM Client] Total prompt size: {total_chars:,} characters")
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload)
+        if response.status_code != 200:
+            print(f"[LLM Client] Response status: {response.status_code}")
+            print(f"[LLM Client] Response body: {response.text}")
         response.raise_for_status()
         data = response.json()
         return data["choices"][0]["message"]["content"]

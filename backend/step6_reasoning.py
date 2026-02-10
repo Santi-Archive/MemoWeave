@@ -235,6 +235,12 @@ def process_reasoning(input_dir: str, output_dir: str) -> Dict[str, Any]:
         events = events_data.get("events", [])
         entities = {} 
 
+    # Cap events to avoid exceeding LLM context limits
+    MAX_EVENTS = 200
+    if len(events) > MAX_EVENTS:
+        print(f"  Truncating {len(events)} events to {MAX_EVENTS} for LLM context limits")
+        events = events[:MAX_EVENTS]
+
     print("Generating prompts...")
     prompts = generate_reasoning_prompt(events, entities)
     
