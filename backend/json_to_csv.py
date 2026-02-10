@@ -137,3 +137,50 @@ def run_json_to_csv(
     # ======================================================
     else:
         raise ValueError(f"Unknown rule class: {rule_class}")
+
+
+# =========================
+# REASONING GRAPH CSV
+# =========================
+
+def convert_reasoning_graph_to_csv(output_dir: str = "output", log_callback: Callable = None) -> str:
+    """
+    Convert reasoning_graph.json to a flat CSV for token-efficient LLM consumption.
+    Only runs if reasoning_graph.json exists (on-demand).
+
+    Returns the CSV path if successful, None if reasoning graph doesn't exist.
+    """
+    reasoning_json_path = os.path.join(output_dir, "memory", "reasoning_graph.json")
+
+    if not os.path.exists(reasoning_json_path):
+        log("No reasoning graph found, skipping CSV conversion.", log_callback)
+        return None
+
+    with open(reasoning_json_path, "r", encoding="utf-8") as f:
+        graph = json.load(f)
+
+    csv_path = os.path.join(output_dir, "memory", "reasoning_graph.csv")
+    fieldnames = ["type", "from_event", "to_event", "relation"]
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for rel in graph.get("temporal_relations", []):
+            writer.writerow({
+                "type": "temporal",
+                "from_event": rel.get("from_event", ""),
+                "to_event": rel.get("to_event", ""),
+                "relation": rel.get("relation", ""),
+            })
+
+        for rel in graph.get("causal_relations", []):
+            writer.writerow({
+                "type": "causal",
+                "from_event": rel.get("from_event", ""),
+                "to_event": rel.get("to_event", ""),
+                "relation": rel.get("relation", ""),
+            })
+
+    log(f"Reasoning graph CSV written to {csv_path}", log_callback)
+    return csv_path

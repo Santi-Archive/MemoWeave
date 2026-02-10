@@ -4,7 +4,8 @@ import os
 import csv
 import requests
 from dotenv import load_dotenv
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Optional
+from backend.json_to_csv import convert_reasoning_graph_to_csv
 
 load_dotenv()
 
@@ -27,6 +28,27 @@ def log(msg: str, callback: Callable = None):
 # Helper Functions
 # =========================
 
+def load_reasoning_csv(output_dir: str = "output") -> Optional[List[Dict[str, str]]]:
+    """
+    Load reasoning_graph.csv if it exists.
+    Converts on-demand from JSON if CSV doesn't exist but JSON does.
+    Returns list of row dicts or None.
+    """
+    csv_path = os.path.join(output_dir, "memory", "reasoning_graph.csv")
+
+    if not os.path.exists(csv_path):
+        converted = convert_reasoning_graph_to_csv(output_dir)
+        if not converted:
+            return None
+        csv_path = converted
+
+    rows = []
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(row)
+    return rows if rows else None
+
 def read_csv_as_chapter_text(csv_path: str) -> Dict[str, List[str]]:
     """
     Reads temporal_consistency.csv and aggregates events per chapter
@@ -45,14 +67,21 @@ def read_csv_as_chapter_text(csv_path: str) -> Dict[str, List[str]]:
 
     return chapters
 
-def build_prompt(chapters: Dict[str, List[str]]) -> str:
+def build_prompt(chapters: Dict[str, List[str]], reasoning_rows: Optional[List[Dict[str, str]]] = None) -> str:
     """
     Builds a single macro-level prompt for the LLM using chapter aggregation.
+    Optionally includes reasoning graph relationships for enhanced analysis.
     """
     prompt = "You are a story consistency validator. Detect any **temporal inconsistencies** in the story. Summarize violations per chapter in human-readable paragraph form. If there are no violations, respond 'No Violations. Wohoo!'\n\n"
     
     for chap_id, events in chapters.items():
         prompt += f"Chapter {chap_id}:\n" + "\n".join(events) + "\n\n"
+
+    if reasoning_rows:
+        prompt += "### KNOWN TEMPORAL & CAUSAL RELATIONSHIPS ###\n"
+        for row in reasoning_rows:
+            prompt += f"{row.get('from_event', '')} {row.get('relation', '')} {row.get('to_event', '')} ({row.get('type', '')})\n"
+        prompt += "\n"
 
     return prompt
 
@@ -95,10 +124,17 @@ def call_reasoning_llm(prompt: str) -> str:
 # Main Function
 # =========================
 
-def generate_feedback(csv_path: str):
+def generate_feedback(csv_path: str, output_dir: str = "output"):
     chapters = read_csv_as_chapter_text(csv_path)
-    prompt = build_prompt(chapters)
+
+    reasoning_rows = load_reasoning_csv(output_dir)
+
+    prompt = build_prompt(chapters, reasoning_rows)
+
     log("Let me check your story...")
+    if reasoning_rows:
+        log("Using temporal and causal relationship data for enhanced analysis...")
+
     return call_reasoning_llm(prompt)
 
 # =========================

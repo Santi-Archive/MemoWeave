@@ -2,10 +2,10 @@
 
 import os
 import csv
-import json
 import requests
 from dotenv import load_dotenv
 from typing import Callable, List, Dict, Optional
+from backend.json_to_csv import convert_reasoning_graph_to_csv
 
 load_dotenv()
 
@@ -28,54 +28,26 @@ def log(msg: str, callback: Callable = None):
 # Helper Functions
 # =========================
 
-def load_reasoning_graph(output_dir: str = "output") -> Optional[Dict]:
+def load_reasoning_csv(output_dir: str = "output") -> Optional[List[Dict[str, str]]]:
     """
-    Load reasoning graph JSON if it exists.
-    Returns None if file doesn't exist (safe fallback).
+    Load reasoning_graph.csv if it exists.
+    Converts on-demand from JSON if CSV doesn't exist but JSON does.
+    Returns list of row dicts or None.
     """
-    reasoning_path = os.path.join(output_dir, "memory", "reasoning_graph.json")
-    if os.path.exists(reasoning_path):
-        try:
-            with open(reasoning_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Warning: Could not load reasoning graph: {e}")
-            return None
-    return None
+    csv_path = os.path.join(output_dir, "memory", "reasoning_graph.csv")
 
-def format_reasoning_graph(reasoning_graph: Optional[Dict]) -> str:
-    """
-    Convert reasoning graph JSON to readable text for LLM.
-    Returns empty string if None passed (safe fallback).
-    """
-    if not reasoning_graph:
-        return ""
-    
-    text = "\n### TEMPORAL & CAUSAL RELATIONS ###\n\n"
-    
-    # Format temporal relations
-    temporal_rels = reasoning_graph.get("temporal_relations", [])
-    if temporal_rels:
-        text += "**Timeline (Temporal Order):**\n"
-        for rel in temporal_rels:
-            from_evt = rel.get("from_event", "unknown")
-            to_evt = rel.get("to_event", "unknown")
-            relation = rel.get("relation", "RELATED")
-            text += f"• Event '{from_evt}' happens {relation} Event '{to_evt}'\n"
-        text += "\n"
-    
-    # Format causal relations
-    causal_rels = reasoning_graph.get("causal_relations", [])
-    if causal_rels:
-        text += "**Cause & Effect Relationships:**\n"
-        for rel in causal_rels:
-            from_evt = rel.get("from_event", "unknown")
-            to_evt = rel.get("to_event", "unknown")
-            relation = rel.get("relation", "AFFECTS")
-            text += f"• Event '{from_evt}' {relation} Event '{to_evt}'\n"
-        text += "\n"
-    
-    return text
+    if not os.path.exists(csv_path):
+        converted = convert_reasoning_graph_to_csv(output_dir)
+        if not converted:
+            return None
+        csv_path = converted
+
+    rows = []
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(row)
+    return rows if rows else None
 
 # =========================
 # CSV and Prompt Functions
@@ -102,19 +74,21 @@ def read_csv_as_chapter_text(csv_path: str) -> Dict[str, List[str]]:
 
     return chapters
 
-def build_prompt(chapters: Dict[str, List[str]], reasoning_graph: Optional[Dict] = None) -> str:
+def build_prompt(chapters: Dict[str, List[str]], reasoning_rows: Optional[List[Dict[str, str]]] = None) -> str:
     """
     Builds a single macro-level prompt for the LLM using chapter aggregation.
-    Optionally includes reasoning graph for enhanced analysis.
+    Optionally includes reasoning graph relationships for enhanced analysis.
     """
     prompt = "You are a story consistency validator. Detect any **role completeness violations** in the story. Summarize violations per chapter in human-readable paragraph form. If there are no violations, respond 'No Violations. Wohoo!'\n\n"
     
     for chap_id, events in chapters.items():
         prompt += f"Chapter {chap_id}:\n" + "\n".join(events) + "\n\n"
     
-    # Add reasoning graph if available
-    if reasoning_graph:
-        prompt += format_reasoning_graph(reasoning_graph)
+    if reasoning_rows:
+        prompt += "### KNOWN TEMPORAL & CAUSAL RELATIONSHIPS ###\n"
+        for row in reasoning_rows:
+            prompt += f"{row.get('from_event', '')} {row.get('relation', '')} {row.get('to_event', '')} ({row.get('type', '')})\n"
+        prompt += "\n"
     
     return prompt
 
@@ -160,17 +134,15 @@ def generate_feedback(csv_path: str, output_dir: str = "output"):
     """Generate feedback with optional reasoning graph integration."""
     chapters = read_csv_as_chapter_text(csv_path)
     
-    # Load reasoning graph if available
-    reasoning_graph = load_reasoning_graph(output_dir)
+    reasoning_rows = load_reasoning_csv(output_dir)
     
-    # Build prompt with reasoning graph
-    prompt = build_prompt(chapters, reasoning_graph)
+    prompt = build_prompt(chapters, reasoning_rows)
     
     log("Let me check your story...")
-    if reasoning_graph:
+    if reasoning_rows:
         log("Using temporal and causal relationship data for enhanced analysis...")
     
-    return call_reasoning_llm(prompt, use_reasoning=bool(reasoning_graph))
+    return call_reasoning_llm(prompt, use_reasoning=bool(reasoning_rows))
 
 # =========================
 # CLI Execution
