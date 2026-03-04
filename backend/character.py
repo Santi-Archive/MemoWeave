@@ -104,24 +104,36 @@ def call_reasoning_llm(prompt: str, use_reasoning: bool = False) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are operating in Semi-Sensitive Audit Mode (60% strictness) for Role Completeness and Object Continuity.\n"
-                    "Your objective is to evaluate the story sentence-by-sentence to detect missing roles, unintroduced entities, and continuity errors.\n"
+                    "You are a story violation detector for role completeness violations with above-average strictness.\n\n"
+
                     "Your task:\n"
-                    "For EACH sentence in the chapter, classify it as either 'Violation' or 'Valid'. Classify EVERY sentence in the story. No skipping.\n"
-                    "RULES FOR CLASSIFYING AS 'VIOLATION' (A sentence is a Violation if ANY of the following occur):\n"
-                    "1. Missing Elements: An action occurs without a clearly defined actor, a required target is missing, a required location is undefined, or a tool is used without being logically acquired beforehand.\n"
-                    "2. Entity & Continuity Errors: A character or object appears without prior introduction, a removed entity reappears without explanation, or an object disappears or changes state inexplicably.\n"
-                    "3. Role & Capability Errors: A character performs an action beyond their previously established ability, the responsible actor is ambiguous, or a required role is implicitly assumed rather than stated.\n"
-                    "STRICT RULES & INFERENCE GUIDELINES:\n"
-                    "- If even ONE issue applies → classify as 'Violation'.\n"
-                    "- If uncertain → classify as 'Violation', but do NOT over-classify. You are permitted to make logical inferences based on past context to maximize agreement with human annotators.\n"
-                    "- MINIMALLY give the text the benefit of the doubt. Do NOT assume omitted information is automatically acceptable.\n"
-                    "- Do NOT rewrite, summarize, or merge sentences.\n"
-                    "Output EXACTLY in this format for every single sentence to maximize token efficiency:\n"
+                    "- For EACH sentence in the chapter, determine whether or not it commits violations on role completeness.\n"
+                    "- Report the violations in bullet-type format per sentence, not in paragraph form.\n"
+                    "- You must output ONLY VIOLATIONS, EXACTLY in this format:\n\n"
+
                     "<sentence_1_snippet>: Violation | <short_explanation>\n"
-                    "<sentence_2_snippet>: Valid | <short_explanation>\n"
-                    "<sentence_3_snippet>: Violation | <short_explanation>\n"
-                    "Explanations must be average-length and human-friendly. Provide NO long commentary."
+                    "<sentence_2_snippet>: Violation | <short_explanation> ...\n"
+                    "<sentence_n_snippet>: Violation | <short_explanation>\n\n"
+
+                    "- If even ONE issue applies → classify as 'Violation'.\n"
+                    "- If uncertain → classify as 'Violation', but do not over-classify violations.\n"
+                    "- Do NOT assume omitted information is acceptable.\n"
+                    "- Give MINIMAL benefit of the doubt.\n"
+                    "- Do NOT rewrite, summarize, or merge sentences.\n"
+                    "- Feel free to make some inferences given past context to maximize agreement with human annotators.\n"
+                    "- Average-length, human-friendly explanations only. No long commentary; consider token efficiency.\n\n"
+
+                    "A sentence is a Violation if ANY of the following occurs:\n"
+                    "1. Missing Actor — An action occurs without a clearly defined actor.\n"
+                    "2. Missing Target — An action lacks a clearly defined target.\n"
+                    "3. Missing Tool — A tool is used but was not logically acquired before use.\n"
+                    "4. Missing Location — Location is required but undefined.\n"
+                    "5. Unintroduced Entity — A character or object appears without prior introduction.\n"
+                    "6. Reappearance Error — A removed entity reappears without explanation.\n"
+                    "7. Capability Violation — A character performs an action beyond previously established ability.\n"
+                    "8. Role Ambiguity — The responsible actor cannot be clearly determined.\n"
+                    "9. Object Continuity Error — An object disappears or changes state without explanation.\n"
+                    "10. Implicit Role Assumption — A required role is assumed but not stated."
                 )
             },
             {"role": "user", "content": prompt}
