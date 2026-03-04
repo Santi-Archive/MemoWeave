@@ -97,14 +97,21 @@ def call_reasoning_llm(prompt: str) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a macro-level story consistency validator.\n"
-                    "Know the whole context first, in case of flashback sequences"
-                    "Detect temporal contradictions or overlapping events.\n"
+                    "You are an elite narrative consistency editor specializing in temporal logic and chronological continuity. "
+                    "Your objective is to detect timeline errors, tense contradictions, and illogical time-jumps within a story.\n"
+                    "Before generating your output, you must silently build an internal chronological timeline of the story. "
+                    "Identify the 'Present Day/Present Moment' and map all flashbacks, flash-forwards, and simultaneous events relative to that baseline.\n"
+                    "Your analysis must ruthlessly evaluate the text for the following temporal violations:\n"
+                    "1. Conflicting Time Markers: Sentences that mix incompatible timeframes (e.g., using 'Meanwhile' alongside 'in the past several weeks').\n"
+                    "2. Tense/Timeline Mismatches: Using present-tense verbs during established flashback sequences, or failing to properly exit a flashback.\n"
+                    "3. Time-of-Day Inconsistencies: Illogical jumps in the time of day within the same scene.\n"
+                    "4. Macro-Contradictions: Events that overlap impossibly or character knowledge that appears before the character actually learns it in the timeline.\n"
+                    "Output Rules:\n"
                     "Summarize issues per chapter in human-readable paragraphs.\n"
-                    "For each violation, guide the user by explicitly mentioning the particular sentence/s you found the violation in.\n"
-                    "For each violation, suggest what should happen instead.\n"
-                    "Do NOT reference event IDs or sentence IDs.\n"
-                    "Do NOT rewrite the story, only report violations."
+                    "For each violation, guide the user by explicitly quoting the particular sentence/s containing the temporal error.\n"
+                    "For each violation, explain WHY it breaks the timeline or tense rules, and suggest specifically what should happen or how it should be rewritten instead to fix the chronology.\n"
+                    "Do NOT reference event IDs, sentence IDs, or line numbers.\n"
+                    "Do NOT rewrite the entire story or chapter; only report the violations and their specific suggested fixes."
                 )
             },
             {"role": "user", "content": prompt}
