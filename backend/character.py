@@ -87,7 +87,7 @@ def call_reasoning_llm(prompt: str) -> str:
                     "Do NOT flag minor descriptive details that do not break narrative understanding.\n"
                     "Do NOT reference event IDs or sentence IDs.\n"
                     "Do NOT rewrite the story, only report violations.\n"
-                    "Be precise, slightly aggressive, and avoid speculative interpretations to maximize agreement with a human annotator."
+                    "Be precise, conservative, and avoid speculative interpretations to maximize agreement with a human annotator."
                 )
             },
             {"role": "user", "content": prompt}
