@@ -337,7 +337,7 @@ async def analyze_stream(filename: str = Query(...), rule: str = Query(...), for
                     if rule == "temporal":
                         feedback_text = generate_temporal_feedback(str(csv_path), story_path=str(input_file))
                     elif rule == "role_completeness":
-                        feedback_text = generate_role_feedback(str(csv_path))
+                        feedback_text = generate_role_feedback(str(csv_path), story_path=str(input_file))
                         
                     result_queue.put(("result", feedback_text))
                     

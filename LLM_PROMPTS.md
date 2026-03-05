@@ -46,29 +46,32 @@ Both use OpenRouter API with the `gpt-oss-120b` model by default.
 
 ### 2. Role Completeness Feedback
 
-**File:** [`backend/character.py`](file:///c:/Users/Gilbert/MemoWeave/backend/character.py)
+**File:** [`backend/character.py`](file:///c:/Users/wobin/Documents/GitHub/MemoWeave/backend/character.py)
 
-**Function:** `call_reasoning_llm()` (lines 62-93)
+**Function:** `call_reasoning_llm()` — Contains the system prompt with 10 violation categories
 
-**System Prompt** (lines 73-80):
-```python
-"You are a macro-level story consistency validator.\n"
-"Detect which missing characters[actor], tools, or roles during events.\n"
-"Some actors could be locations.\n"
-"Summarize issues per chapter in human-readable paragraphs.\n"
-"Do NOT reference event IDs or sentence IDs.\n"
-"Do NOT rewrite the story, only report violations."
-```
+**System Prompt Violation Categories:**
+1. Geographic/Directional Contradictions
+2. Orphaned Entities (Introduced but Never Used)
+3. Unintroduced Entities (Used without Prior Mention)
+4. Object/Action Semantic Mismatch
+5. Location/Setting Inconsistencies
+6. Logic Failures in Routine/Established Facts
+7. Dangling/Ambiguous References
+8. Unjustified Action/Motivation (Out of Character)
+9. Unresolved Foreshadowing or Questions
+10. Terminology/Item Inconsistency
 
-**User Prompt Builder:** `build_prompt()` (lines 51-60)
-- Aggregates events by chapter from the role_completeness.csv
+**User Prompt Builder:** `build_prompt()` 
+- Includes the **full raw story text** for analyzing narrative context, descriptive introductions, and character motivations
+- Aggregates extracted role events by chapter from the role_completeness.csv
 - Formats: `"Chapter {id}: - {event_text} (actor: {actor}, target: {target}, location: {location})"`
 
 **To Fine-tune:**
-- Modify the system prompt content in lines 74-79 to change LLM behavior
+- Modify the violation categories in the system prompt to change what the LLM looks for
 - Adjust the user prompt format in `build_prompt()` to change data presentation
 - Change `MODEL_NAME` (line 17) to use a different model
-- Adjust `temperature` (line 84) for more/less creative responses (currently 0.0)
+- Adjust `temperature` for more/less creative responses (currently 0.0)
 
 ---
 

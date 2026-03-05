@@ -101,12 +101,12 @@ def call_reasoning_llm(prompt: str) -> str:
                     "## VIOLATION CATEGORIES TO CHECK\n\n"
                     
                     "1. **Contradictory Time Signals for the Same Event**: When two different temporal references point to the same event but contradict each other. "
-                    "For example, if a debriefing is referred to as both 'weeks earlier' and 'Three months prior' within connected passages, "
-                    "the indefinite 'weeks' contradicts the definite 'three months'. Flag when the same event is anchored to incompatible time references.\n\n"
+                    "For example, if a meeting is referred to as both 'a few days ago' and 'two months prior' within connected passages, "
+                    "the indefinite reference contradicts the definite one. Flag when the same event is anchored to incompatible time references.\n\n"
                     
                     "2. **Spatial-Temporal Contradictions**: When the narrative establishes a character's present location and time-of-day in one paragraph, "
                     "but a later paragraph in the same 'present' context places them at a different location with a contradictory time-of-day. "
-                    "For example, if the opening establishes 'early morning sun' on a yacht in Palawan as the present, but later the 'present day' shows 'mid-day heat of Mactan', "
+                    "For example, if the opening places a character at 'dawn on a rooftop in Paris', but later the same 'present' shows them under 'the noon sun in Berlin', "
                     "the character cannot be in both places at the same present time.\n\n"
                     
                     "3. **Verb Tense Violations in Flashback/Present Transitions**: When a passage is explicitly framed as a flashback (e.g., 'Back to three months earlier') "
@@ -115,9 +115,9 @@ def call_reasoning_llm(prompt: str) -> str:
                     
                     "4. **Deictic Marker Misuse ('Now', 'the present')**: The word 'Now' anchors the reader to the story's established present timeline. "
                     "If 'Now' appears inside a passage that is clearly a flashback or recovery period, it contradicts the established present. "
-                    "For example, if the present is set on a yacht in Palawan, using 'Now' in a passage about reading a dossier during recovery (which is a flashback) is a violation.\n\n"
+                    "For example, if the present is set at a cafe in the afternoon, using 'Now' inside a passage about a character's childhood memory (which is a flashback) is a violation.\n\n"
                     
-                    "5. **Contradictory 'Present' Anchors**: When the narrative establishes one scene as 'the present' (e.g., opening paragraph on a yacht), "
+                    "5. **Contradictory 'Present' Anchors**: When the narrative establishes one scene as 'the present' (e.g., opening paragraph at a train station at dawn), "
                     "but later uses 'back to the present' to introduce a completely different scene with contradictory details (different location, different time of day). "
                     "This cancels out the original established present.\n\n"
                     
@@ -134,8 +134,8 @@ def call_reasoning_llm(prompt: str) -> str:
                     "If a scene uses 'night' but contextual details (arriving under 'dim glow of early evening', dinner activities) indicate evening, flag the inconsistency.\n\n"
                     
                     "9. **Cross-Chapter Timeline Continuity**: Track when narrative timelines begin AND end across chapters. "
-                    "If a present-day timeline in Mactan is concluded in a specific chapter (e.g., the scene ends with a revelation in a server room), "
-                    "then a later reference to carrying something 'into the present timeline of Mactan' is a violation because that timeline has already ended.\n\n"
+                    "If a present-day timeline in a city is concluded in a specific chapter (e.g., the scene ends with a final revelation and the character departs), "
+                    "then a later reference to carrying something 'into the present timeline' of that city is a violation because that timeline has already ended.\n\n"
                     
                     "## MANDATORY ANALYSIS PROCEDURE\n\n"
                     "You MUST follow these steps in order:\n\n"
