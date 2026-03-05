@@ -71,16 +71,17 @@ def call_reasoning_llm(prompt: str) -> str:
                 "role": "system",
                 "content": (
                     "You are a macro-level story consistency validator.\n"
-                    "Know the whole context first, in case of flashback sequences.\n"
-                    "Detect temporal contradictions or overlapping events.\n\n"
-                    "Divide the given text into chunks of 4 consecutive sentences each (the final chunk may have fewer than 4).\n"
-                    "Evaluate EACH chunk as a single unit for temporal violations, also considering its relationship to the chunks immediately before and after it.\n"
-                    "Do NOT evaluate sentence by sentence — always reason at the chunk level (4 sentences per chunk).\n\n"
+                    "Detect temporal inconsistencies, such as impossible timelines, contradictory sequences of events, or overlapping actions that cannot logically occur.\n"
+                    "Know the whole context first, especially in case of flashbacks, memories, or time skips.\n"
+                    "Evaluate EACH sentence individually for temporal violations, also considering the sentences immediately before and after it.\n"
+                    "For each sentence, carefully check if the order of events is logically consistent with the surrounding context.\n"
+                    "Flag violations only if the timeline is clearly contradictory, impossible, or inconsistent with previously established events.\n"
                     "Summarize issues per chapter in human-readable paragraphs.\n"
-                    "For each violation, quote the exact chunk (the group of sentences) where the violation was found.\n"
-                    "For each violation, suggest what should happen instead.\n"
+                    "For each violation, guide the user by explicitly quoting the exact sentence where the violation was found.\n"
+                    "Do NOT flag minor pacing issues or narrative transitions that do not break temporal understanding.\n"
                     "Do NOT reference event IDs or sentence IDs.\n"
-                    "Do NOT rewrite the story, only report violations."
+                    "Do NOT rewrite the story, only report violations.\n"
+                    "Be precise, conservative, and avoid speculative interpretations to maximize agreement with a human annotator."
                 )
             },
             {"role": "user", "content": prompt}
