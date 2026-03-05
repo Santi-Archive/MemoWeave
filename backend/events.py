@@ -97,62 +97,17 @@ def call_reasoning_llm(prompt: str) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are an elite narrative temporal-logic auditor. Your sole domain is the TEMPORAL CONSISTENCY of a story. "
-                    "You have zero tolerance for timeline paradoxes, but you are also intelligent enough to distinguish deliberate literary devices from genuine errors.\n\n"
-
-                    "=== PHASE 1: SILENT PREPROCESSING (do NOT output this) ===\n"
-                    "Before writing ANY output, you MUST internally:\n"
-                    "1. Reconstruct the story's master chronological timeline, mapping every scene to an absolute or relative time anchor.\n"
-                    "2. Identify all temporal layers: Present-Day narrative, flashbacks, flash-forwards, dream sequences, and embedded narratives (stories within stories).\n"
-                    "3. Track every temporal transition signal (e.g., 'years ago', 'the next morning', 'meanwhile') and verify that each one correctly enters or exits its temporal layer.\n"
-                    "4. For each sentence, determine its temporal context: WHICH layer it belongs to, WHAT time-of-day or time-period it implies, and whether it is consistent with the sentences immediately before and after it.\n\n"
-
-                    "=== PHASE 2: SENTENCE-LEVEL VIOLATION SCAN ===\n"
-                    "Scan every sentence against the following violation taxonomy. A sentence is flagged ONLY if it meets one or more of these categories:\n\n"
-
-                    "CATEGORY 1 — Conflicting Time Markers:\n"
-                    "A sentence or pair of adjacent sentences contains two or more time indicators that are mutually exclusive within the same temporal layer "
-                    "(e.g., 'That same afternoon... weeks had passed since then' within a continuous scene).\n\n"
-
-                    "CATEGORY 2 — Tense-Layer Mismatch:\n"
-                    "A sentence uses verb tense that contradicts its established temporal layer. Examples: present-tense narration inside an established past-tense flashback "
-                    "without a clear transition signal, or past-tense narration after the story has returned to present-day without re-anchoring.\n\n"
-
-                    "CATEGORY 3 — Time-of-Day / Duration Impossibility:\n"
-                    "Within a single continuous scene (no scene break or time-skip signal), the time-of-day jumps illogically "
-                    "(e.g., morning to midnight with no elapsed-time indicator), or an action's described duration contradicts the scene's timeframe.\n\n"
-
-                    "CATEGORY 4 — Chronological Causality Breach:\n"
-                    "An effect is narrated before its cause within the same temporal layer, or two events that require sequential ordering are presented as simultaneous, "
-                    "or a character references knowledge of an event that has not yet occurred in their timeline.\n\n"
-
-                    "CATEGORY 5 — Unresolved Temporal Layer:\n"
-                    "A flashback, flash-forward, or dream sequence is opened but never closed — the narrative fails to return the reader to the original temporal layer, "
-                    "creating ambiguity about which timeline subsequent sentences belong to.\n\n"
-
-                    "=== FALSE-POSITIVE SUPPRESSION RULES ===\n"
-                    "Do NOT flag any of the following as violations:\n"
-                    "- Deliberate flashbacks or flash-forwards that use clear transition signals (e.g., 'He remembered...', 'Years from now...').\n"
-                    "- Intentional non-linear storytelling where temporal shifts are signaled by scene breaks, chapter breaks, or explicit narrative cues.\n"
-                    "- Grammatical errors, typos, sentence fragments, missing verbs, duplicated text, or stylistic choices. Your domain is TEMPORAL LOGIC ONLY.\n"
-                    "- Ambiguities that can be reasonably resolved by a careful reader using context from surrounding sentences.\n\n"
-
-                    "=== CONFIDENCE THRESHOLD ===\n"
-                    "Only report a violation if you are at least 75% confident it is a genuine temporal inconsistency and not a literary device or contextual ambiguity. "
-                    "If uncertain, err on the side of NOT flagging.\n\n"
-
-                    "=== OUTPUT FORMAT ===\n"
-                    "Group all findings by chapter. For each chapter with violations, write a concise, human-readable paragraph that:\n"
-                    "1. Quotes the EXACT problematic sentence(s) verbatim.\n"
-                    "2. States the violation category (1–5).\n"
-                    "3. Explains in plain language WHY the quoted sentence breaks temporal consistency, referencing the conflicting time anchors or tense rules.\n"
-                    "If a chapter has no violations, state: 'No temporal violations detected.'\n\n"
-
-                    "=== HARD CONSTRAINTS ===\n"
-                    "- Do NOT suggest fixes, rewrites, or alternative phrasings under any circumstances.\n"
-                    "- Do NOT reference event IDs, sentence IDs, row numbers, or any metadata.\n"
-                    "- Do NOT output your internal timeline or preprocessing work.\n"
-                    "- Do NOT summarize or rewrite the story."
+                    "You are a macro-level story consistency validator.\n"
+                    "Know the whole context first, in case of flashback sequences.\n"
+                    "Detect temporal contradictions or overlapping events.\n\n"
+                    "Divide the given text into chunks of 4 consecutive sentences each (the final chunk may have fewer than 4).\n"
+                    "Evaluate EACH chunk as a single unit for temporal violations, also considering its relationship to the chunks immediately before and after it.\n"
+                    "Do NOT evaluate sentence by sentence — always reason at the chunk level (4 sentences per chunk).\n\n"
+                    "Summarize issues per chapter in human-readable paragraphs.\n"
+                    "For each violation, quote the exact chunk (the group of sentences) where the violation was found.\n"
+                    "For each violation, suggest what should happen instead.\n"
+                    "Do NOT reference event IDs or sentence IDs.\n"
+                    "Do NOT rewrite the story, only report violations."
                 )
             },
             {"role": "user", "content": prompt}
@@ -174,14 +129,13 @@ def call_reasoning_llm(prompt: str) -> str:
 
 def generate_feedback(csv_path: str, output_dir: str = "output"):
     chapters = read_csv_as_chapter_text(csv_path)
-
     reasoning_rows = load_reasoning_csv(output_dir)
-
     prompt = build_prompt(chapters, reasoning_rows)
 
-    log("Let me check your story...")
-    if reasoning_rows:
-        log("Using temporal and causal relationship data for enhanced analysis...")
+    log("Sending to LLM API...")
+    log(f"[DATA] Chapters loaded: {list(chapters.keys())}")
+    log(f"[DATA] Reasoning rows: {len(reasoning_rows) if reasoning_rows else 0}")
+    log(f"[PROMPT]\n{prompt}")
 
     return call_reasoning_llm(prompt)
 
