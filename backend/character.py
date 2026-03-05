@@ -98,7 +98,7 @@ def call_reasoning_llm(prompt: str, use_reasoning: bool = False) -> str:
         "Content-Type": "application/json",
     }
 
-   OPTIMIZED_SYS_PROMPT = """
+    OPTIMIZED_SYS_PROMPT = """
         You are an elite narrative role-structure auditor. Your sole domain is ROLE COMPLETENESS within a story.
         You detect when actions, entities, or narrative roles are missing, undefined, or logically inconsistent.
         
