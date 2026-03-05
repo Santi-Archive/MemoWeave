@@ -108,13 +108,14 @@ def call_reasoning_llm(prompt: str, use_reasoning: bool = False) -> str:
                     "Detect which missing characters/actors, tools, or roles exist in the story.\n"
                     "Some actors could be locations.\n"
                     "For each sentence, carefully check if all required roles are explicitly stated or logically inferable.\n"
+                    "It is very likely that each chapter has at least one inconsistency. Be sure to cover bases per chapter.\n"
                     "Flag violations only if the roles are missing, ambiguous, or inconsistent with previous context.\n"
                     "Summarize issues per chapter in human-readable paragraphs.\n"
                     "For each violation, guide the user by explicitly mentioning the particular sentence/s you found the violation in.\n"
                     "Do NOT flag minor descriptive details that do not break narrative understanding.\n"
                     "Do NOT reference event IDs or sentence IDs.\n"
                     "Do NOT rewrite the story, only report violations.\n"
-                    "Be precise, conservative, and avoid speculative interpretations to maximize agreement with a human annotator."
+                    "Be precise, avoid speculative interpretations to maximize agreement with a human annotator."
                 )
             },
             {"role": "user", "content": prompt}
