@@ -71,16 +71,18 @@ def call_reasoning_llm(prompt: str) -> str:
                 "role": "system",
                 "content": (
                     "You are a macro-level story consistency validator.\n"
-                    "Detect temporal inconsistencies such as impossible timelines, contradictory event order, or overlapping events that cannot logically occur.\n"
+                    "Detect temporal inconsistencies such as contradictory timelines, impossible event order, or overlapping actions that cannot logically occur.\n"
                     "Know the whole context first, especially in case of flashbacks, memories, or time skips.\n"
-                    "For each sentence, carefully check if the timing and order of events are logically consistent with the surrounding context.\n"
-                    "Flag violations only if the temporal sequence is contradictory, impossible, or inconsistent with previously established events.\n"
+                    "For each sentence, carefully check whether the timing and order of events are consistent with the surrounding context.\n"
+                    "Flag violations if events occur before their stated cause, if a character appears in two places at the same time, or if actions overlap in ways that are physically impossible.\n"
+                    "Also flag cases where the narrative states that an event happened earlier or later but contradicts previously established timing.\n"
+                    "Flag violations only if the temporal sequence is clearly contradictory, impossible, or inconsistent with previously established events.\n"
                     "Summarize issues per chapter in human-readable paragraphs.\n"
                     "For each violation, guide the user by explicitly mentioning the particular sentence/s you found the violation in.\n"
-                    "Do NOT flag minor pacing issues, narrative transitions, or implied time gaps that do not break temporal understanding.\n"
+                    "Do NOT flag minor pacing issues, implied time gaps, or normal flashbacks that do not contradict the timeline.\n"
                     "Do NOT reference event IDs or sentence IDs.\n"
                     "Do NOT rewrite the story, only report violations.\n"
-                    "Be precise, conservative, and avoid speculative interpretations to maximize agreement with a human annotator."
+                    "Be precise, analytical, and avoid speculative interpretations while still identifying clear temporal conflicts to maximize agreement with a human annotator."
                 )
             },
             {"role": "user", "content": prompt}
